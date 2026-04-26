@@ -1,0 +1,4 @@
+mode: "bootstrap"
+port: 9002
+relay: true
+public_ip: "127.0.0.1"
