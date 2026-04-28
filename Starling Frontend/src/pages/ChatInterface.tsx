@@ -7,15 +7,35 @@ interface Message {
   content: string;
 }
 
-// Replace this with your real API call
+// API request to the Go Gateway
 async function sendToAPI(messages: Message[]): Promise<string> {
-  const res = await fetch("/api/chat", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages }),
-  });
-  const data = await res.json();
-  return data.content;
+  try {
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ messages }),
+    });
+
+    // Check if the response is ok (status 200-299)
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Gateway error (${response.status}): ${errorText}`);
+    }
+
+    const data = await response.json();
+    
+    // The gateway sends back {"content": "..."}
+    if (!data.content) {
+      throw new Error("Gateway returned empty response");
+    }
+
+    return data.content;
+  } catch (error) {
+    console.error("API request failed:", error);
+    throw error; // Re-throw so the UI can handle it
+  }
 }
 
 export default function ChatInterface() {
@@ -48,10 +68,19 @@ export default function ChatInterface() {
         ...prev,
         { id: crypto.randomUUID(), role: "assistant", content: reply },
       ]);
-    } catch {
+    } catch (error) {
+      // Show a friendly error message in the chat
+      const errorMsg = error instanceof Error 
+        ? error.message 
+        : "Something went wrong. Please try again.";
+      
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: "Error — please try again." },
+        { 
+          id: crypto.randomUUID(), 
+          role: "assistant", 
+          content: `❌ Error: ${errorMsg}` 
+        },
       ]);
     } finally {
       setLoading(false);
