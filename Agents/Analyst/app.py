@@ -29,38 +29,53 @@ ZG_PRIVATE_KEY = os.environ.get("ZEROG_PRIVATE_KEY")
 
 # --- 1. THE 0G STORAGE HANDLER ---
 def upload_to_0g(data_dict):
-    """
-    Uses the agent's unique private key to sign and upload to 0G.
-    """
-    # Create a unique filename for this specific agent's output
     filename = f"{AGENT_ID}_analysis_{int(time.time())}.json"
     
     with open(filename, "w") as f:
         json.dump(data_dict, f)
     
-    print(f"📦 [{AGENT_ID}] Evidence saved to {filename}. Uploading to 0G...")
+    # Ensure the key is clean for the CLI
+    clean_key = ZG_PRIVATE_KEY.strip().replace("0x", "")
+    
+    # Check key length (Should be 64 chars)
+    if len(clean_key) != 64:
+        print(f"⚠️ Warning: Private key length is {len(clean_key)}, expected 64.")
 
     try:
-        # We call the zgs-client using the key loaded from THIS agent's .env
+        zgs_path = "/usr/local/bin/zgs-client"
+        
+        # Use the Galileo Indexer
+        ZG_INDEXER = os.environ.get("ZG_INDEXER_ENDPOINT", "https://indexer-storage-testnet-turbo.0g.ai")
+
         cmd = [
-            "zgs-client", "upload",
+            zgs_path, "upload",
             "--url", ZG_RPC,
-            "--key", ZG_PRIVATE_KEY,
-            "--file", filename
+            "--key", clean_key,
+            "--file", filename,
+            "--indexer", ZG_INDEXER
         ]
         
+        print(f"🚀 [{AGENT_ID}] Uploading to 0G Galileo...")
+        result = subprocess.run(cmd, capture_output=True, text=True)
         result = subprocess.run(cmd, capture_output=True, text=True)
         
+        # ADD THESE TWO LINES FOR DEBUGGING
+        all_output = result.stdout + result.stderr
+        
         if result.returncode == 0:
-            for line in result.stdout.split('\n'):
-                if "DataRoot:" in line:
-                    return line.split(":")[1].strip(), filename
-            return "0x_mock_hash_success", filename
+            for line in all_output.split('\n'):
+                # We target the specific "root =" string from your logs
+                if "root =" in line or "DataRoot:" in line:
+                    # Split by '=' or ':' and grab the hex string
+                    hash_part = line.replace("root =", ":").split(":")[-1].strip()
+                    if hash_part.startswith("0x"):
+                        return hash_part, filename
+            
+            return "0x_upload_verified_check_terminal", filename
         else:
-            print(f"❌ [{AGENT_ID}] 0G Upload Failed: {result.stderr}")
+            print(f"❌ 0G Error: {result.stderr}")
             return None, filename
     except Exception as e:
-        print(f"⚠️ [{AGENT_ID}] 0G CLI error: {e}")
         return f"0x_sim_hash_{AGENT_ID}", filename
 
 # --- 2. BITCOIN DATA SENSOR ---
