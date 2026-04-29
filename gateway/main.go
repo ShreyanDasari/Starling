@@ -21,6 +21,20 @@ type ChatResponse struct {
 	Content string `json:"content"`
 }
 
+type ParsedIntent struct {
+	Capability []string `json:"capability"`
+	Params map[string]string `json:"params"`
+	Goal string `json:"goal"`
+}
+
+type Agent struct {
+	Name string `json:"name"`
+	Capabilities []string `json:"capabilities"`
+	Endpoint string `json:"endpoint"`
+}
+
+
+
 func main() {
 	http.HandleFunc("/api/chat", handleChat)
 	http.HandleFunc("/health",   handleHealth)

@@ -1,0 +1,38 @@
+openapi: 3.0.0
+info:
+  title: Starling Analyst API
+  description: API for Bitcoin market analysis and monitoring.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081
+    description: Local development server
+
+paths:
+  /execute:
+    post:
+      summary: Execute an analysis task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                question:
+                  type: string
+                  example: "What is the current BTC trend?"
+      responses:
+        '200':
+          description: Successful analysis
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reply:
+                    type: string
+                  agent:
+                    type: string
+                  data_source:
+                    type: string
